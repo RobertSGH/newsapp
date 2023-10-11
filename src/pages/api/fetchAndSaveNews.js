@@ -1,31 +1,53 @@
 import { MongoClient } from 'mongodb';
 import axios from 'axios';
+import * as admin from 'firebase-admin';
 
-// URL and parameters for NewsAPI
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(process.env.FIREBASE_ADMIN_SDK_PATH),
+  });
+}
+
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-const newsApiUrl = `${baseUrl}/top-headlines`;
-const newsApiParams = {
-  language: 'en',
-  category: 'general',
-  page: 2,
-  pageSize: 10,
-  apiKey: process.env.NEXT_PUBLIC_API_KEY,
-};
-
-// MongoDB configuration
-const uri = process.env.NEXT_PUBLIC_MONGODB_URI;
-const collectionName = 'headlines'; // replace with 'everything' for the other collection
+const headlinesApiUrl = `${baseUrl}/top-headlines`;
 
 export default async function handler(req, res) {
-  // Only allow this route to be triggered in a dev environment
-  if (process.env.NODE_ENV !== 'development') {
-    res.status(403).json({ error: 'This route is not allowed in production.' });
-    return;
+  const token = req.headers.authorization?.split(' ')[1]; // Assuming the token is sent as a Bearer token
+  if (!token) {
+    return res.status(401).send('Authorization token must be provided');
   }
 
   try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    if (decodedToken.uid !== 'Vqf1xTrzXCWuxvFvo6qFP4Wz1im1') {
+      return res.status(403).send('Unauthorized access');
+    }
+  } catch (error) {
+    return res.status(401).send('Invalid token');
+  }
+
+  if (req.method !== 'POST') {
+    // Handle non-POST requests
+    res.status(405).json({ error: 'Invalid request method' });
+    return;
+  }
+
+  const { country, category, pageSize, collectionName } = req.body;
+
+  // Create params object for API call
+  const params = {
+    country,
+    category,
+    pageSize,
+    apiKey: process.env.NEXT_PUBLIC_API_KEY,
+  };
+
+  // MongoDB configuration
+  const uri = process.env.NEXT_PUBLIC_MONGODB_URI;
+
+  try {
     // Fetch news data
-    const newsResponse = await axios.get(newsApiUrl, { params: newsApiParams });
+    const newsResponse = await axios.get(headlinesApiUrl, { params });
     const newsData = newsResponse.data;
 
     // Connect to MongoDB
@@ -37,7 +59,7 @@ export default async function handler(req, res) {
     const collection = client.db('newsapp').collection(collectionName);
 
     // Insert news data into MongoDB
-    await collection.deleteMany({});
+    // await collection.deleteMany({});
     await collection.insertMany(newsData.articles);
 
     await client.close();

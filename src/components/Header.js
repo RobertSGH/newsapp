@@ -1,71 +1,74 @@
 import Link from 'next/link';
-import { useState } from 'react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/solid';
+import { useContext, useEffect, useState } from 'react';
+import { UserContext } from '@/lib/UserContext';
 
 const Header = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const logo = '/NeW-removebg-preview.png';
+  const today = new Date();
+  const currentDay = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+  });
+  const currentMonth = today.toLocaleDateString('en-US', {
+    month: 'long',
+  });
+  const currentYear = today.getFullYear();
+  const currentNumDay = today.getDate();
+  const formattedDate = `${currentDay}, ${currentMonth} ${currentNumDay}, ${currentYear}`;
+
+  const { user, isLoading, logoutUser } = useContext(UserContext);
+
+  const handleLogout = async () => {
+    await logoutUser();
+  };
+
+  useEffect(() => {
+    window.renderWeatherWidget(
+      'widget',
+      'https://weatherapp-o38ejph7l-robertsgh.vercel.app/api'
+    );
+  }, []);
 
   return (
-    <header className='flex items-center justify-between px-5 py-3 bg-gray-900 text-white'>
-      <p href='/'>
-        <a className='text-2xl font-bold'>My News App</a>
-      </p>
-
-      {/* For larger screens */}
-      <nav className='hidden md:block'>
-        <ul className='flex items-center space-x-4'>
-          <li>
-            <Link href='/category/world'>
-              <p className='hover:text-gray-300'>World</p>
-            </Link>
-          </li>
-          <li>
-            <Link href='/category/sports'>
-              <p className='hover:text-gray-300'>Sports</p>
-            </Link>
-          </li>
-          <li>
-            <Link href='/category/business'>
-              <p className='hover:text-gray-300'>Business</p>
-            </Link>
-          </li>
-          //... add more as per your requirements
-        </ul>
-      </nav>
-
-      {/* For smaller screens */}
-      <div className='md:hidden'>
-        <button onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? (
-            <XMarkIcon className='w-6 h-6' />
-          ) : (
-            <Bars3Icon className='w-6 h-6' />
-          )}
-        </button>
+    <header className='flex items-center justify-between px-5 py-3'>
+      <div className='flex justify-start items-center w-1/3'>
+        <p className='text-xs sm:text-sm md:text-base lg:text-lg'>
+          {formattedDate}
+        </p>
       </div>
 
-      {isOpen && (
-        <nav className='fixed z-10 top-0 right-0 w-1/2 h-full bg-gray-800 md:hidden'>
-          <ul className='flex flex-col items-start justify-center h-full space-y-4 px-5 py-3'>
-            <li>
-              <Link href='/category/world'>
-                <p className='hover:text-gray-300'>World</p>
-              </Link>
-            </li>
-            <li>
-              <Link href='/category/sports'>
-                <p className='hover:text-gray-300'>Sports</p>
-              </Link>
-            </li>
-            <li>
-              <Link href='/category/business'>
-                <p className='hover:text-gray-300'>Business</p>
-              </Link>
-            </li>
-            //... add more as per your requirements
-          </ul>
-        </nav>
-      )}
+      <Link href='/' className='w-1/3 flex justify-center'>
+        <img src={logo} alt='logo' className='responsive-logo' />
+      </Link>
+
+      <div className='w-1/2 flex justify-center'>
+        <div id='widget'></div>
+      </div>
+
+      <div className='flex flex-col items-end justify-center md:items-center md:flex-row md:space-x-2'>
+        {isLoading ? (
+          <p className='text-xs sm:text-sm md:text-base lg:text-lg'>
+            Loading...
+          </p>
+        ) : user ? (
+          <>
+            <p className='text-xs sm:text-sm md:text-base lg:text-lg'>
+              Welcome, {user.displayName}
+            </p>
+            <button
+              className='md:ml-2 text-xs sm:text-sm md:text-base lg:text-lg'
+              onClick={handleLogout}
+            >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <Link href='/SignIn'>
+            <p className='text-xs sm:text-sm md:text-base lg:text-lg'>
+              Sign in
+            </p>
+          </Link>
+        )}
+      </div>
     </header>
   );
 };

@@ -1,28 +1,85 @@
 import { useState, useEffect } from 'react';
-import { getNews } from '@/helpers';
+import {
+  getPoliticsNews,
+  getBusinessNews,
+  getEntertainmentNews,
+  getTechNews,
+  // getNews,
+} from '@/helpers';
 import MainLayout from '@/layouts/MainLayout';
-import NewsSection from '@/components/NewsCard';
+import LandingPage from './LandingPage';
+import Cookies from 'js-cookie';
+import TopClickedArticles from '@/components/TopClickedArticles';
+import CombinedNewsSection from '@/components/CombinedNewsSection';
+import SpecialNewsSection from '@/components/SpecialNewsSection';
 
 export default function Home() {
-  const [news, setNews] = useState([]);
+  const [allTopics] = useState([
+    'Politics',
+    'Business',
+    'Technology',
+    'Entertainment',
+  ]);
+  const [newsData, setNewsData] = useState({
+    politicsNews: [],
+    businessNews: [],
+    techNews: [],
+    entertainmentNews: [],
+  });
+
+  const [selectedInterests, setSelectedInterests] = useState(null);
 
   useEffect(() => {
-    const fetchNews = async () => {
-      const newsData = await getNews();
-      if (newsData && newsData.articles) {
-        setNews(newsData.articles);
-      }
-    };
-
-    fetchNews();
+    const savedPreferences = Cookies.get('userPreferences');
+    if (savedPreferences) {
+      setSelectedInterests(JSON.parse(savedPreferences));
+    }
   }, []);
 
-  return (
-    <MainLayout>
-      {/* We use NewsSection instead of mapping through each news item */}
-      <NewsSection news={news} />
+  const fetchNews = async (topicsToFetch) => {
+    const fetchFunctions = {
+      Politics: getPoliticsNews,
+      Business: getBusinessNews,
+      Technology: getTechNews,
+      Entertainment: getEntertainmentNews,
+    };
 
-      {/* Add more sections as needed */}
+    const newsDataLocal = { ...newsData }; // Local object to hold news data
+
+    await Promise.all(
+      topicsToFetch.map(async (topicName) => {
+        const fetchFunction = fetchFunctions[topicName];
+        const newsArticles = await fetchFunction();
+        newsDataLocal[topicName.toLowerCase() + 'News'] =
+          newsArticles.articles || [];
+      })
+    );
+    setNewsData(newsDataLocal);
+  };
+
+  useEffect(() => {
+    if (selectedInterests) {
+      fetchNews(Object.keys(selectedInterests));
+    }
+  }, [selectedInterests]);
+
+  const handleSelectionSubmit = (preferences) => {
+    setSelectedInterests(preferences);
+  };
+  // console.log(newsData);
+
+  return !selectedInterests ? (
+    <LandingPage onSelectionSubmit={handleSelectionSubmit} />
+  ) : (
+    <MainLayout>
+      <CombinedNewsSection
+        allTopics={allTopics}
+        newsData={newsData}
+        selectedInterests={selectedInterests}
+        fetchNews={fetchNews}
+      />
+      <TopClickedArticles news={newsData} />
+      <SpecialNewsSection news={newsData} />
     </MainLayout>
   );
 }

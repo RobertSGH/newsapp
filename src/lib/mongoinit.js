@@ -3,7 +3,7 @@ import { MongoClient } from 'mongodb';
 const uri = process.env.NEXT_PUBLIC_MONGODB_URI;
 let cachedDb = null;
 
-async function connectToDatabase() {
+export async function connectToDatabase() {
   if (cachedDb) {
     return cachedDb;
   }
@@ -35,6 +35,10 @@ export async function getNewsFromDb() {
 
     try {
       everythingData = await everythingCollection.find().toArray();
+      everythingData = everythingData.map((item) => ({
+        ...item,
+        _id: item._id.toString(),
+      }));
     } catch (error) {
       console.error('Error fetching everything data:', error);
       throw error;
@@ -42,6 +46,10 @@ export async function getNewsFromDb() {
 
     try {
       headlinesData = await headlinesCollection.find().toArray();
+      headlinesData = headlinesData.map((item) => ({
+        ...item,
+        _id: item._id.toString(),
+      }));
     } catch (error) {
       console.error('Error fetching headlines data:', error);
       throw error;
@@ -50,6 +58,76 @@ export async function getNewsFromDb() {
     return { articles: [...everythingData, ...headlinesData] };
   } catch (error) {
     console.error('Error in getNewsFromDb:', error);
+    throw error;
+  }
+}
+
+export async function getPoliticsNewsFromDb() {
+  try {
+    const db = await connectToDatabase();
+    const politicsCollection = db.collection('politics');
+    let politicsData = await politicsCollection.find().toArray();
+    politicsData = politicsData.map((item) => ({
+      ...item,
+      _id: item._id.toString(),
+    }));
+    return { articles: politicsData };
+  } catch (error) {
+    console.error('Error in getPoliticsNewsFromDb:', error);
+    throw error;
+  }
+}
+
+export async function getBusinessNewsFromDb() {
+  try {
+    const db = await connectToDatabase();
+    const businessCollection = db.collection('business');
+    let businessData = await businessCollection.find().toArray();
+    businessData = businessData.map((item) => ({
+      ...item,
+      _id: item._id.toString(),
+    }));
+    return { articles: businessData };
+  } catch (error) {
+    console.error('Error in getBusinessNewsFromDb:', error);
+    throw error;
+  }
+}
+
+export async function getTechNewsFromDb() {
+  try {
+    const db = await connectToDatabase();
+    const techCollection = db.collection('technology');
+    const count = await techCollection.countDocuments();
+    if (count === 0) {
+      console.error('Technology collection is empty!');
+      return { articles: [] };
+    }
+
+    let techData = await techCollection.find().toArray();
+    techData = techData.map((item) => ({
+      ...item,
+      _id: item._id.toString(),
+    }));
+    return { articles: techData };
+  } catch (error) {
+    console.error('Error in getTechNewsFromDb:', error);
+    throw error;
+  }
+}
+
+export async function getEntertainmentNewsFromDb() {
+  try {
+    const db = await connectToDatabase();
+    const entertainmentCollection = db.collection('entertainment');
+    let entertainmentData = await entertainmentCollection.find().toArray();
+    entertainmentData = entertainmentData.map((item) => ({
+      ...item,
+      _id: item._id.toString(),
+    }));
+    return { articles: entertainmentData };
+  } catch (error) {
+    console.error('Error in getEntertainmentNewsFromDb:', error);
     throw error;
   }
 }
